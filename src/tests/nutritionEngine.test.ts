@@ -78,8 +78,7 @@ describe('generateEvents', () => {
 		const events = generateEvents(
 			route,
 			{ carbsGPerHr: 60, sodiumMgPerHr: 700, refuelIntervalMin: 30, intensity: 'moderate' },
-			600,
-			700
+			600
 		)
 		const durationMinutes = (route.distanceKm / 25) * 60
 		const expected = Math.floor(durationMinutes / 30) - 1
@@ -91,8 +90,7 @@ describe('generateEvents', () => {
 		const events = generateEvents(
 			route,
 			{ carbsGPerHr: 60, sodiumMgPerHr: 700, refuelIntervalMin: 30, intensity: 'moderate' },
-			600,
-			700
+			600
 		)
 		expect(events).toEqual([])
 	})
@@ -102,8 +100,7 @@ describe('generateEvents', () => {
 		const events = generateEvents(
 			route,
 			{ carbsGPerHr: 60, sodiumMgPerHr: 700, refuelIntervalMin: 30, intensity: 'moderate' },
-			600,
-			700
+			600
 		)
 		const hasClimbNote = events.some((event) => event.note === 'climb ahead, fuel now')
 		expect(hasClimbNote).toBe(true)

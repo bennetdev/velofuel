@@ -140,7 +140,7 @@ export function calcSweatRateMlPerHr(rider: RiderProfile, conditions: RideCondit
 /**
  * Create refuel events on a fixed interval, shifting earlier when a climb is imminent.
  */
-export function generateEvents(route: GpxRoute, targets: NutritionTargets, sweatRateMlPerHr: number, kcalPerHr: number): RefuelEvent[] {
+export function generateEvents(route: GpxRoute, targets: NutritionTargets, sweatRateMlPerHr: number): RefuelEvent[] {
     if (!route.points.length) {
         return []
     }
@@ -258,7 +258,7 @@ export function calculatePlan(route: GpxRoute, rider: RiderProfile, targets: Nut
     const estDurationHr = estimateDurationHr(route, targets.intensity)
     const sweatRateMlPerHr = calcSweatRateMlPerHr(rider, conditions, targets.intensity)
     const kcalPerHr = calcKcalPerHr(rider, targets.intensity, route.elevationGainM, estDurationHr)
-    const events = generateEvents(route, targets, sweatRateMlPerHr, kcalPerHr)
+    const events = generateEvents(route, targets, sweatRateMlPerHr)
     const totalCarbsG = events.reduce((sum, event) => sum + event.carbsG, 0)
     const allocation = allocateCarbsGreedy(totalCarbsG, foodLibrary)
     const packingList = buildPackingList(events, allocation.items)
@@ -266,7 +266,15 @@ export function calculatePlan(route: GpxRoute, rider: RiderProfile, targets: Nut
     const totalSodiumMg = events.reduce((sum, event) => sum + event.sodiumMg, 0)
     const totalWaterL = events.reduce((sum, event) => sum + event.drinkMl, 0) / 1000
     const totalKcal = kcalPerHr * estDurationHr
-    const warning = allocation.remainingCarbsG > 0 ? 'Food library does not cover carb target.' : undefined
+    const warningMessages: string[] = []
+    if (allocation.remainingCarbsG > 0) {
+        warningMessages.push('Food library does not cover carb target.')
+    }
+    const carbKcalPerHr = targets.carbsGPerHr * 4
+    if (kcalPerHr > 0 && carbKcalPerHr < kcalPerHr * 0.3) {
+        warningMessages.push('Carb intake covers less than 30% of estimated burn.')
+    }
+    const warning = warningMessages.length ? warningMessages.join(' ') : undefined
 
     return {
         totalKcal,
