@@ -1,0 +1,155 @@
+import { useMemo, useState } from 'react'
+import {
+    Area,
+    ComposedChart,
+    ReferenceLine,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis
+} from 'recharts'
+
+import type { GpxPoint, GpxRoute, RefuelEvent } from '../types'
+
+type RouteTimelineProps = {
+    route: GpxRoute
+    events: RefuelEvent[]
+}
+
+type ElevationPoint = { km: number; ele: number }
+
+const ORANGE = '#E8540A'
+const BLUE = '#3B82F6'
+
+function toRadians(deg: number): number {
+    return (deg * Math.PI) / 180
+}
+
+function haversineKm(a: GpxPoint, b: GpxPoint): number {
+    const radiusKm = 6371
+    const dLat = toRadians(b.lat - a.lat)
+    const dLon = toRadians(b.lon - a.lon)
+    const lat1 = toRadians(a.lat)
+    const lat2 = toRadians(b.lat)
+    const sinLat = Math.sin(dLat / 2)
+    const sinLon = Math.sin(dLon / 2)
+    const h = sinLat * sinLat + Math.cos(lat1) * Math.cos(lat2) * sinLon * sinLon
+    return 2 * radiusKm * Math.asin(Math.min(1, Math.sqrt(h)))
+}
+
+function downsample<T>(arr: T[], maxPoints: number): T[] {
+    if (arr.length <= maxPoints) {
+        return arr
+    }
+    const step = (arr.length - 1) / (maxPoints - 1)
+    const sampled: T[] = []
+    for (let i = 0; i < maxPoints; i += 1) {
+        const index = Math.round(i * step)
+        sampled.push(arr[index])
+    }
+    return sampled
+}
+
+function formatTime(totalMinutes: number): string {
+    const rounded = Math.max(0, Math.round(totalMinutes))
+    const hours = Math.floor(rounded / 60)
+    const minutes = rounded % 60
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+}
+
+function buildElevationData(points: GpxPoint[]): ElevationPoint[] {
+    const data: ElevationPoint[] = []
+    let distance = 0
+    for (let i = 0; i < points.length; i += 1) {
+        if (i > 0) {
+            distance += haversineKm(points[i - 1], points[i])
+        }
+        data.push({ km: distance, ele: points[i].ele })
+    }
+    return downsample(data, 500)
+}
+
+function TimelineStrip({ route, events }: RouteTimelineProps) {
+    const [hovered, setHovered] = useState<RefuelEvent | null>(null)
+    const distanceKm = route.distanceKm || 0
+
+    return (
+        <div className="timeline-strip">
+            <div className="timeline-line" />
+            <div className="timeline-label start">0 km</div>
+            <div className="timeline-label end">{Math.round(distanceKm)} km</div>
+            {events.map((event, index) => {
+                const percent = distanceKm > 0 ? (event.km / distanceKm) * 100 : 0
+                const markerColor = event.carbsG > 0 ? ORANGE : BLUE
+                return (
+                    <button
+                        key={`${event.km}-${index}`}
+                        className="timeline-marker"
+                        type="button"
+                        style={{ left: `${percent}%`, backgroundColor: markerColor }}
+                        onMouseEnter={() => setHovered(event)}
+                        onMouseLeave={() => setHovered((current) => (current === event ? null : current))}
+                    >
+                        <span className="sr-only">Refuel event</span>
+                    </button>
+                )
+            })}
+            {hovered ? (
+                <div
+                    className="timeline-tooltip"
+                    style={{ left: `${distanceKm > 0 ? (hovered.km / distanceKm) * 100 : 0}%` }}
+                >
+                    <p>
+                        <strong>{hovered.km.toFixed(1)} km</strong> · {formatTime(hovered.timeMin)}
+                    </p>
+                    <p>
+                        Drink {Math.round(hovered.drinkMl)} ml · Carbs {Math.round(hovered.carbsG)} g · Sodium{' '}
+                        {Math.round(hovered.sodiumMg)} mg
+                    </p>
+                    {hovered.note ? <p className="timeline-note">{hovered.note}</p> : null}
+                </div>
+            ) : null}
+        </div>
+    )
+}
+
+function ElevationChart({ route, events }: RouteTimelineProps) {
+    const data = useMemo(() => buildElevationData(route.points), [route.points])
+    return (
+        <div className="elevation-card">
+            <ResponsiveContainer width="100%" height={240}>
+                <ComposedChart data={data} margin={{ top: 10, right: 20, bottom: 20, left: 60 }}>
+                    <XAxis
+                        dataKey="km"
+                        type="number"
+                        domain={[0, Math.round(route.distanceKm)]}
+                        label={{ value: 'km', position: 'insideBottom', offset: -10 }}
+                    />
+                    <YAxis label={{ value: 'm', angle: -90, position: 'insideLeft' }} />
+                    <Tooltip
+                        formatter={(value: number) => Math.round(value)}
+                        labelFormatter={(value) => `${Number(value).toFixed(1)} km`}
+                    />
+                    <Area type="monotone" dataKey="ele" stroke={ORANGE} fill="rgba(232, 84, 10, 0.15)" />
+                    {events.map((event, index) => (
+                        <ReferenceLine
+                            key={`${event.km}-${index}`}
+                            x={event.km}
+                            stroke={event.carbsG > 0 ? ORANGE : BLUE}
+                            strokeDasharray="3 3"
+                        />
+                    ))}
+                </ComposedChart>
+            </ResponsiveContainer>
+        </div>
+    )
+}
+
+export function RouteTimeline({ route, events }: RouteTimelineProps) {
+    return (
+        <div className="route-timeline">
+            <TimelineStrip route={route} events={events} />
+            <ElevationChart route={route} events={events} />
+        </div>
+    )
+}
