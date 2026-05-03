@@ -56,4 +56,5 @@ export type FoodItem = {
     sodiumMg: number
     waterMl: number             // some foods contribute hydration (fruit, rice cakes)
     isPreset: boolean
+    version?: number
 }
