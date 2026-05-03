@@ -1,0 +1,1 @@
+async function fetchWeather(lat: number, lon: number, startTime: Date): Promise<RideConditions>

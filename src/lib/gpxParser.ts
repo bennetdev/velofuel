@@ -1,0 +1,1 @@
+function parseGpx(xmlString: string): GpxRoute
