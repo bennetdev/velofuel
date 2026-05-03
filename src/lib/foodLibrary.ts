@@ -4,16 +4,6 @@ const CUSTOM_FOODS_KEY = 'velofuel_custom_foods'
 
 export const PRESET_FOODS: FoodItem[] = [
     {
-        id: 'maurten-gel-100',
-        name: 'Maurten gel 100',
-        weightG: 40,
-        kcal: 100,
-        carbsG: 25,
-        sodiumMg: 55,
-        waterMl: 0,
-        isPreset: true
-    },
-    {
         id: 'banana-medium',
         name: 'Banana medium',
         weightG: 120,
@@ -24,44 +14,14 @@ export const PRESET_FOODS: FoodItem[] = [
         isPreset: true
     },
     {
-        id: 'medjool-date',
-        name: 'Medjool date',
-        weightG: 24,
-        kcal: 67,
-        carbsG: 18,
-        sodiumMg: 0,
-        waterMl: 4,
-        isPreset: true
-    },
-    {
-        id: 'rice-cake',
-        name: 'Rice cake',
-        weightG: 60,
-        kcal: 110,
-        carbsG: 22,
-        sodiumMg: 120,
-        waterMl: 20,
-        isPreset: true
-    },
-    {
-        id: 'clif-bar',
-        name: 'Clif bar',
-        weightG: 68,
-        kcal: 250,
-        carbsG: 45,
-        sodiumMg: 200,
+        id: 'fruechteriegel',
+        name: 'Früchteriegel',
+        weightG: 30,
+        kcal: 95,
+        carbsG: 20,
+        sodiumMg: 20,
         waterMl: 0,
-        isPreset: true
-    },
-    {
-        id: 'tailwind-1-scoop',
-        name: 'Tailwind 1 scoop',
-        weightG: 29,
-        kcal: 100,
-        carbsG: 25,
-        sodiumMg: 310,
-        waterMl: 500,
-        isPreset: true
+        isPreset: false
     }
 ]
 

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-import { calculatePlan } from '../lib/nutritionEngine'
+import { calculatePlan, getOptimalTargets } from '../lib/nutritionEngine'
 import { loadFoodLibrary, saveFoodLibrary } from '../lib/foodLibrary'
 import type {
     FoodItem,
@@ -22,17 +22,22 @@ type RideStoreState = {
     setRoute: (route: GpxRoute) => void
     setRider: (fields: Partial<RiderProfile>) => void
     setTargets: (fields: Partial<NutritionTargets>) => void
+    applyOptimalTargets: () => void
     setConditions: (fields: Partial<RideConditions>) => void
     setFoodLibrary: (items: FoodItem[]) => void
     setWeatherError: (msg: string | null) => void
     recalculate: () => void
 }
 
+const RIDER_STORAGE_KEY = 'velofuel_rider'
+const TARGETS_STORAGE_KEY = 'velofuel_targets'
+
 const DEFAULT_RIDER: RiderProfile = {
     weightKg: 75,
     heightCm: 175,
     age: 30,
-    sex: 'male'
+    sex: 'male',
+    waterCapacityMl: 1500
 }
 
 const DEFAULT_TARGETS: NutritionTargets = {
@@ -49,10 +54,40 @@ const DEFAULT_CONDITIONS: RideConditions = {
     isHeadwind: false
 }
 
+function loadStored<T>(key: string): T | null {
+    try {
+        const raw = localStorage.getItem(key)
+        if (!raw) {
+            return null
+        }
+        return JSON.parse(raw) as T
+    } catch {
+        return null
+    }
+}
+
+function saveStored<T>(key: string, value: T): void {
+    try {
+        localStorage.setItem(key, JSON.stringify(value))
+    } catch {
+        // ignore storage errors
+    }
+}
+
+function loadRider(): RiderProfile {
+    const stored = loadStored<Partial<RiderProfile>>(RIDER_STORAGE_KEY)
+    return { ...DEFAULT_RIDER, ...(stored ?? {}) }
+}
+
+function loadTargets(): NutritionTargets {
+    const stored = loadStored<Partial<NutritionTargets>>(TARGETS_STORAGE_KEY)
+    return { ...DEFAULT_TARGETS, ...(stored ?? {}) }
+}
+
 export const useRideStore = create<RideStoreState>((set, get) => ({
     route: null,
-    rider: DEFAULT_RIDER,
-    targets: DEFAULT_TARGETS,
+    rider: loadRider(),
+    targets: loadTargets(),
     conditions: DEFAULT_CONDITIONS,
     foodLibrary: loadFoodLibrary(),
     plan: null,
@@ -62,11 +97,24 @@ export const useRideStore = create<RideStoreState>((set, get) => ({
         get().recalculate()
     },
     setRider: (fields) => {
-        set((state) => ({ rider: { ...state.rider, ...fields } }))
+        set((state) => {
+            const rider = { ...state.rider, ...fields }
+            saveStored(RIDER_STORAGE_KEY, rider)
+            return { rider }
+        })
         get().recalculate()
     },
     setTargets: (fields) => {
-        set((state) => ({ targets: { ...state.targets, ...fields } }))
+        set((state) => {
+            const targets = { ...state.targets, ...fields }
+            saveStored(TARGETS_STORAGE_KEY, targets)
+            return { targets }
+        })
+        get().recalculate()
+    },
+    applyOptimalTargets: () => {
+        const optimal = getOptimalTargets(get().targets.intensity)
+        get().setTargets(optimal)
         get().recalculate()
     },
     setConditions: (fields) => {

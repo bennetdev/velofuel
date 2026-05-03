@@ -9,17 +9,19 @@ import {
     YAxis
 } from 'recharts'
 
-import type { GpxPoint, GpxRoute, RefuelEvent } from '../types'
+import type { GpxPoint, GpxRoute, RefillEvent, RefuelEvent } from '../types'
 
 type RouteTimelineProps = {
     route: GpxRoute
     events: RefuelEvent[]
+    refillEvents: RefillEvent[]
 }
 
 type ElevationPoint = { km: number; ele: number }
 
 const ORANGE = '#E8540A'
 const BLUE = '#3B82F6'
+const REFILL_BLUE = '#2563EB'
 
 function toRadians(deg: number): number {
     return (deg * Math.PI) / 180
@@ -69,8 +71,12 @@ function buildElevationData(points: GpxPoint[]): ElevationPoint[] {
     return downsample(data, 500)
 }
 
-function TimelineStrip({ route, events }: RouteTimelineProps) {
-    const [hovered, setHovered] = useState<RefuelEvent | null>(null)
+type HoveredMarker =
+    | { kind: 'refuel'; event: RefuelEvent }
+    | { kind: 'refill'; event: RefillEvent }
+
+function TimelineStrip({ route, events, refillEvents }: RouteTimelineProps) {
+    const [hovered, setHovered] = useState<HoveredMarker | null>(null)
     const distanceKm = route.distanceKm || 0
 
     return (
@@ -87,38 +93,66 @@ function TimelineStrip({ route, events }: RouteTimelineProps) {
                         className="timeline-marker"
                         type="button"
                         style={{ left: `${percent}%`, backgroundColor: markerColor }}
-                        onMouseEnter={() => setHovered(event)}
-                        onMouseLeave={() => setHovered((current) => (current === event ? null : current))}
+                        onMouseEnter={() => setHovered({ kind: 'refuel', event })}
+                        onMouseLeave={() => setHovered((current) => (current?.event === event ? null : current))}
                     >
                         <span className="sr-only">Refuel event</span>
+                    </button>
+                )
+            })}
+            {refillEvents.map((event, index) => {
+                const percent = distanceKm > 0 ? (event.km / distanceKm) * 100 : 0
+                return (
+                    <button
+                        key={`refill-${event.km}-${index}`}
+                        className="timeline-marker refill"
+                        type="button"
+                        style={{ left: `${percent}%`, backgroundColor: REFILL_BLUE }}
+                        onMouseEnter={() => setHovered({ kind: 'refill', event })}
+                        onMouseLeave={() => setHovered((current) => (current?.event === event ? null : current))}
+                    >
+                        <span className="sr-only">Refill bottles</span>
                     </button>
                 )
             })}
             {hovered ? (
                 <div
                     className="timeline-tooltip"
-                    style={{ left: `${distanceKm > 0 ? (hovered.km / distanceKm) * 100 : 0}%` }}
+                    style={{ left: `${distanceKm > 0 ? (hovered.event.km / distanceKm) * 100 : 0}%` }}
                 >
-                    <p>
-                        <strong>{hovered.km.toFixed(1)} km</strong> · {formatTime(hovered.timeMin)}
-                    </p>
-                    <p>
-                        Drink {Math.round(hovered.drinkMl)} ml · Carbs {Math.round(hovered.carbsG)} g · Sodium{' '}
-                        {Math.round(hovered.sodiumMg)} mg
-                    </p>
-                    {hovered.note ? <p className="timeline-note">{hovered.note}</p> : null}
+                    {hovered.kind === 'refuel' ? (
+                        <>
+                            <p>
+                                <strong>{hovered.event.km.toFixed(1)} km</strong> · {formatTime(hovered.event.timeMin)}
+                            </p>
+                            <p>
+                                Drink {Math.round(hovered.event.drinkMl)} ml · Carbs {Math.round(hovered.event.carbsG)} g · Sodium{' '}
+                                {Math.round(hovered.event.sodiumMg)} mg
+                            </p>
+                            {hovered.event.note ? <p className="timeline-note">{hovered.event.note}</p> : null}
+                        </>
+                    ) : (
+                        <>
+                            <p>
+                                <strong>Refill bottles</strong> · {formatTime(hovered.event.timeMin)}
+                            </p>
+                            <p>
+                                {hovered.event.km.toFixed(1)} km · Fill to {Math.round(hovered.event.refillMl)} ml
+                            </p>
+                        </>
+                    )}
                 </div>
             ) : null}
         </div>
     )
 }
 
-function ElevationChart({ route, events }: RouteTimelineProps) {
+function ElevationChart({ route, events, refillEvents }: RouteTimelineProps) {
     const data = useMemo(() => buildElevationData(route.points), [route.points])
     return (
         <div className="elevation-card">
             <ResponsiveContainer width="100%" height={240}>
-                <ComposedChart data={data} margin={{ top: 10, right: 20, bottom: 20, left: 60 }}>
+                <ComposedChart data={data} margin={{ top: 10, right: 20, bottom: 20, left: 20 }}>
                     <XAxis
                         dataKey="km"
                         type="number"
@@ -139,17 +173,25 @@ function ElevationChart({ route, events }: RouteTimelineProps) {
                             strokeDasharray="3 3"
                         />
                     ))}
+                    {refillEvents.map((event, index) => (
+                        <ReferenceLine
+                            key={`refill-${event.km}-${index}`}
+                            x={event.km}
+                            stroke={REFILL_BLUE}
+                            strokeWidth={2}
+                        />
+                    ))}
                 </ComposedChart>
             </ResponsiveContainer>
         </div>
     )
 }
 
-export function RouteTimeline({ route, events }: RouteTimelineProps) {
+export function RouteTimeline({ route, events, refillEvents }: RouteTimelineProps) {
     return (
         <div className="route-timeline">
-            <TimelineStrip route={route} events={events} />
-            <ElevationChart route={route} events={events} />
+            <TimelineStrip route={route} events={events} refillEvents={refillEvents} />
+            <ElevationChart route={route} events={events} refillEvents={refillEvents} />
         </div>
     )
 }

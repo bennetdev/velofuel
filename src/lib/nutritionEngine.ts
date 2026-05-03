@@ -5,6 +5,7 @@ import type {
     NutritionPlan,
     NutritionTargets,
     PackingItem,
+    RefillEvent,
     RefuelEvent,
     RiderProfile,
     RideConditions
@@ -28,6 +29,18 @@ const INTENSITY_MULTIPLIER: Record<Intensity, number> = {
     easy: 0.8,
     moderate: 1.0,
     hard: 1.25
+}
+
+export function getOptimalTargets(
+    intensity: Intensity
+): Pick<NutritionTargets, 'carbsGPerHr' | 'sodiumMgPerHr' | 'refuelIntervalMin'> {
+    if (intensity === 'easy') {
+        return { carbsGPerHr: 40, sodiumMgPerHr: 400, refuelIntervalMin: 45 }
+    }
+    if (intensity === 'hard') {
+        return { carbsGPerHr: 90, sodiumMgPerHr: 1000, refuelIntervalMin: 20 }
+    }
+    return { carbsGPerHr: 60, sodiumMgPerHr: 700, refuelIntervalMin: 30 }
 }
 
 /** Clamp a numeric value to an inclusive range. */
@@ -251,6 +264,36 @@ export function derivePackingList(events: RefuelEvent[], foodLibrary: FoodItem[]
     return buildPackingList(events, items)
 }
 
+export function generateRefillEvents(
+    events: RefuelEvent[],
+    waterCapacityMl: number,
+    route: GpxRoute
+): RefillEvent[] {
+    const totalWaterMl = events.reduce((sum, event) => sum + event.drinkMl, 0)
+    if (waterCapacityMl <= 0 || totalWaterMl <= waterCapacityMl) {
+        return []
+    }
+    const durationHr = estimateDurationHr(route, 'moderate')
+    const totalMinutes = durationHr > 0 ? durationHr * 60 : 0
+    const refillEvents: RefillEvent[] = []
+    let currentWaterMl = waterCapacityMl
+
+    for (const event of events) {
+        currentWaterMl -= event.drinkMl
+        if (currentWaterMl < 200) {
+            const timeMin = route.distanceKm > 0 ? (event.km / route.distanceKm) * totalMinutes : 0
+            refillEvents.push({
+                km: event.km,
+                timeMin,
+                refillMl: waterCapacityMl
+            })
+            currentWaterMl = waterCapacityMl
+        }
+    }
+
+    return refillEvents
+}
+
 /**
  * Master nutrition planner that computes totals, events, and packing list.
  */
@@ -262,6 +305,7 @@ export function calculatePlan(route: GpxRoute, rider: RiderProfile, targets: Nut
     const totalCarbsG = events.reduce((sum, event) => sum + event.carbsG, 0)
     const allocation = allocateCarbsGreedy(totalCarbsG, foodLibrary)
     const packingList = buildPackingList(events, allocation.items)
+    const refillEvents = generateRefillEvents(events, rider.waterCapacityMl, route)
 
     const totalSodiumMg = events.reduce((sum, event) => sum + event.sodiumMg, 0)
     const totalWaterL = events.reduce((sum, event) => sum + event.drinkMl, 0) / 1000
@@ -284,6 +328,7 @@ export function calculatePlan(route: GpxRoute, rider: RiderProfile, targets: Nut
         sweatRateMlPerHr,
         estDurationHr,
         events,
+        refillEvents,
         packingList,
         warning
     }

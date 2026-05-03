@@ -216,6 +216,7 @@ select {
   gap: 8px;
   font-size: 0.9rem;
   color: var(--muted);
+  min-width: 0;
 }
 
 .field input,
@@ -225,6 +226,13 @@ select {
   padding: 10px 12px;
   background: #fff;
   color: var(--text);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.field input[type='datetime-local'] {
+  padding-right: 32px;
 }
 
 .field input[type='range'] {
@@ -340,6 +348,17 @@ select {
   transform: translateY(-1px);
 }
 
+.secondary {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: #fff;
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
 .chips {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -351,6 +370,10 @@ select {
   border-radius: var(--radius-md);
   padding: 12px;
   background: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
 }
 
 .chip-title {
@@ -360,6 +383,25 @@ select {
 
 .chip-meta {
   font-size: 0.85rem;
+}
+
+.chip-remove {
+  border: none;
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.food-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  align-items: end;
+  width: 100%;
 }
 
 .stat-grid {
@@ -395,12 +437,12 @@ select {
 .timeline-strip {
   position: relative;
   height: 60px;
-  padding: 0 20px 0 60px;
+  padding: 0 20px;
 }
 
 .timeline-line {
   position: absolute;
-  left: 60px;
+  left: 20px;
   right: 20px;
   top: 50%;
   height: 2px;
@@ -418,6 +460,12 @@ select {
   transform: translate(-50%, -50%);
   cursor: pointer;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.timeline-marker.refill {
+  width: 16px;
+  height: 16px;
+  box-shadow: 0 6px 12px rgba(37, 99, 235, 0.3);
 }
 
 .timeline-tooltip {
@@ -451,7 +499,7 @@ select {
 }
 
 .timeline-label.start {
-  left: 60px;
+  left: 20px;
 }
 
 .timeline-label.end {
@@ -519,6 +567,22 @@ th {
   border-radius: var(--radius-md);
   padding: 12px 14px;
   border: 1px solid rgba(209, 84, 26, 0.2);
+}
+
+.warning-amber {
+  background: #fff4d1;
+  color: #8b5a00;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  border: 1px solid #f6d37c;
+}
+
+.warning-green {
+  background: #e6f7ec;
+  color: #176c3a;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  border: 1px solid #9fdfb6;
 }
 
 .error-text {

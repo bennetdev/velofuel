@@ -3,7 +3,7 @@ export type GpxPoint = { lat: number; lon: number; ele: number; time?: Date }
 export type GpxRoute = { points: GpxPoint[]; distanceKm: number; elevationGainM: number; durationHr?: number }
 
 // Rider
-export type RiderProfile = { weightKg: number; heightCm: number; age: number; sex: 'male' | 'female' }
+export type RiderProfile = { weightKg: number; heightCm: number; age: number; sex: 'male' | 'female'; waterCapacityMl: number }
 
 // Ride settings (the sliders)
 export type NutritionTargets = {
@@ -31,6 +31,12 @@ export type RefuelEvent = {
     note?: string               // e.g. "steep climb ahead — eat now"
 }
 
+export type RefillEvent = {
+    km: number
+    timeMin: number
+    refillMl: number
+}
+
 // Full output
 export type NutritionPlan = {
     totalKcal: number
@@ -40,6 +46,7 @@ export type NutritionPlan = {
     sweatRateMlPerHr: number
     estDurationHr: number
     events: RefuelEvent[]
+    refillEvents: RefillEvent[]
     packingList: PackingItem[]  // derived: "3 gels, 2 bars, 1.8L water"
     warning?: string
 }
