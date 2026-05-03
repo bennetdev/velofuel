@@ -3,7 +3,7 @@
 
 **Plan your ride nutrition.** VeloFuel is a browser-based cycling nutrition dashboard that turns a GPX file, real-time weather data, and your on-bike food into a personalised refuelling timeline — telling you exactly when to eat, when to drink, and what to pack.
 
-**[Live demo](https://velofuel.vercel.app)** · Built with React, TypeScript, and Vite.
+**[Live demo](https://velofuel-two.vercel.app/)** · Built with React, TypeScript, and Vite.
 
 ![VeloFuel dashboard screenshot](/src/assets/demo1.png)
 ![VeloFuel dashboard screenshot2](/src/assets/demo2.png)
