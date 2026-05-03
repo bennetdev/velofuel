@@ -36,14 +36,14 @@ function makeClimbRoute(): GpxRoute {
 
 describe('calcKcalPerHr', () => {
 	it('returns a reasonable kcal/hr for moderate effort', () => {
-		const rider: RiderProfile = { weightKg: 75, heightCm: 175, age: 30, sex: 'male' }
+		const rider: RiderProfile = { weightKg: 75, heightCm: 175, age: 30, sex: 'male', waterCapacityMl: 1500 }
 		const result = calcKcalPerHr(rider, 'moderate', 500, 3)
 		expect(result).toBeGreaterThan(600)
 		expect(result).toBeLessThan(800)
 	})
 
 	it('hard intensity produces more kcal/hr than easy', () => {
-		const rider: RiderProfile = { weightKg: 75, heightCm: 175, age: 30, sex: 'male' }
+		const rider: RiderProfile = { weightKg: 75, heightCm: 175, age: 30, sex: 'male', waterCapacityMl: 1500 }
 		const easy = calcKcalPerHr(rider, 'easy', 500, 3)
 		const hard = calcKcalPerHr(rider, 'hard', 500, 3)
 		expect(hard).toBeGreaterThan(easy)
@@ -54,15 +54,15 @@ describe('calcSweatRateMlPerHr', () => {
 	it('higher heat/humidity male is higher than cool/dry female', () => {
 		const hot: RideConditions = { tempC: 30, humidityPct: 80, windKmh: 0, isHeadwind: false }
 		const cool: RideConditions = { tempC: 15, humidityPct: 40, windKmh: 0, isHeadwind: false }
-		const male: RiderProfile = { weightKg: 75, heightCm: 175, age: 30, sex: 'male' }
-		const female: RiderProfile = { weightKg: 75, heightCm: 175, age: 30, sex: 'female' }
+		const male: RiderProfile = { weightKg: 75, heightCm: 175, age: 30, sex: 'male', waterCapacityMl: 1500 }
+		const female: RiderProfile = { weightKg: 75, heightCm: 175, age: 30, sex: 'female', waterCapacityMl: 1500 }
 		const hotRate = calcSweatRateMlPerHr(male, hot, 'moderate')
 		const coolRate = calcSweatRateMlPerHr(female, cool, 'moderate')
 		expect(hotRate).toBeGreaterThan(coolRate)
 	})
 
 	it('always clamps to 300-2000 ml/hr', () => {
-		const rider: RiderProfile = { weightKg: 75, heightCm: 175, age: 30, sex: 'male' }
+		const rider: RiderProfile = { weightKg: 75, heightCm: 175, age: 30, sex: 'male', waterCapacityMl: 1500 }
 		const hot: RideConditions = { tempC: 50, humidityPct: 100, windKmh: 0, isHeadwind: false }
 		const cold: RideConditions = { tempC: -10, humidityPct: 0, windKmh: 0, isHeadwind: true }
 		const high = calcSweatRateMlPerHr(rider, hot, 'hard')

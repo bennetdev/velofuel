@@ -5,7 +5,8 @@
 
 **[Live demo](https://velofuel.vercel.app)** · Built with React, TypeScript, and Vite.
 
-![VeloFuel dashboard screenshot](./docs/screenshot.png)
+![VeloFuel dashboard screenshot](/src/assets/demo1.png)
+![VeloFuel dashboard screenshot2](/src/assets/demo2.png)
 
 ---
 

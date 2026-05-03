@@ -161,7 +161,7 @@ function ElevationChart({ route, events, refillEvents }: RouteTimelineProps) {
                     />
                     <YAxis label={{ value: 'm', angle: -90, position: 'insideLeft' }} />
                     <Tooltip
-                        formatter={(value: number) => Math.round(value)}
+                        formatter={(value) => (typeof value === 'number' ? Math.round(value) : value)}
                         labelFormatter={(value) => `${Number(value).toFixed(1)} km`}
                     />
                     <Area type="monotone" dataKey="ele" stroke={ORANGE} fill="rgba(232, 84, 10, 0.15)" />
