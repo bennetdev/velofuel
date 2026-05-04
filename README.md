@@ -1,5 +1,5 @@
 # VeloFuel
-*Mostly vide coded project
+*Mostly vibe coded project
 
 **Plan your ride nutrition.** VeloFuel is a browser-based cycling nutrition dashboard that turns a GPX file, real-time weather data, and your on-bike food into a personalised refuelling timeline — telling you exactly when to eat, when to drink, and what to pack.
 
