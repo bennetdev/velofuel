@@ -314,9 +314,11 @@ export function calculatePlan(route: GpxRoute, rider: RiderProfile, targets: Nut
     if (allocation.remainingCarbsG > 0) {
         warningMessages.push('Food library does not cover carb target.')
     }
-    const carbKcalPerHr = targets.carbsGPerHr * 4
-    if (kcalPerHr > 0 && carbKcalPerHr < kcalPerHr * 0.3) {
-        warningMessages.push('Carb intake covers less than 30% of estimated burn.')
+    if (estDurationHr > 1 && targets.carbsGPerHr < 30) {
+        warningMessages.push('Carb intake below 30 g/hr for a ride over 1 hour — under-fuelling likely.')
+    }
+    if (estDurationHr > 2.5 && targets.carbsGPerHr < 60) {
+        warningMessages.push('Rides over 2.5 hours benefit from at least 60 g/hr carbohydrate intake.')
     }
     const warning = warningMessages.length ? warningMessages.join(' ') : undefined
 

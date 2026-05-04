@@ -136,7 +136,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="hero">
-        <p className="eyebrow">Fuel Lab</p>
+        <p className="eyebrow">VeloFuel</p>
         <h1>Plan your ride nutrition</h1>
         <p className="lede">
           Upload a GPX file, tune targets, and confirm hydration and fueling in one view.
