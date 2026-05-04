@@ -81,7 +81,7 @@ function TimelineStrip({ route, events, refillEvents }: RouteTimelineProps) {
     const distanceKm = route.distanceKm || 0
 
     return (
-        <div className="timeline-strip" style={{ marginLeft: 92, marginRight: 30 }}>
+        <div className="timeline-strip">
             <div className="timeline-line" />
             <div className="timeline-label start">0 km</div>
             <div className="timeline-label end">{Math.round(distanceKm)} km</div>
