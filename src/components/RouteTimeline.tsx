@@ -183,7 +183,7 @@ function ElevationChart({ route, events, refillEvents }: RouteTimelineProps) {
                             key={`${event.km}-${index}`}
                             x={event.km}
                             stroke={event.type === 'combined' ? PURPLE : event.type === 'food' ? ORANGE : BLUE}
-                            strokeDasharray={event.type === 'combined' ? undefined : '3 3'}
+                            strokeDasharray={'3 3'}
                         />
                     ))}
                     {refillEvents.map((event, index) => (
