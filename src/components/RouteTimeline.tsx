@@ -81,7 +81,7 @@ function TimelineStrip({ route, events, refillEvents }: RouteTimelineProps) {
     const distanceKm = route.distanceKm || 0
 
     return (
-        <div className="timeline-strip">
+        <div className="timeline-strip" style={{ marginLeft: 92, marginRight: 30 }}>
             <div className="timeline-line" />
             <div className="timeline-label start">0 km</div>
             <div className="timeline-label end">{Math.round(distanceKm)} km</div>
@@ -169,6 +169,7 @@ function ElevationChart({ route, events, refillEvents }: RouteTimelineProps) {
                         dataKey="km"
                         type="number"
                         domain={[0, Math.round(route.distanceKm)]}
+                        tickFormatter={(v) => (typeof v === "number" ? Math.round(v) : v)}
                         label={{ value: 'km', position: 'insideBottom', offset: -10 }}
                     />
                     <YAxis label={{ value: 'm', angle: -90, position: 'insideLeft' }} />
