@@ -7,6 +7,7 @@ import type {
     PackingItem,
     RefillEvent,
     RefuelEvent,
+    RideKitItem,
     RiderProfile,
     RideConditions
 } from '../types'
@@ -351,10 +352,78 @@ function buildPackingList(events: RefuelEvent[], items: PackingItem[]): PackingI
     return packingList
 }
 
-export function derivePackingList(events: RefuelEvent[], foodLibrary: FoodItem[]): PackingItem[] {
-    const totalCarbsG = events.reduce((sum, event) => sum + event.carbsG, 0)
-    const { items } = allocateCarbsGreedy(totalCarbsG, foodLibrary)
-    return buildPackingList(events, items)
+export function derivePackingListFromKit(
+    totalCarbsG: number,
+    rideKit: RideKitItem[],
+    foodLibrary: FoodItem[]
+): { items: PackingItem[]; remainingCarbsG: number } {
+    const kitById = new Map(rideKit.map((item) => [item.foodId, item.quantity]))
+    const candidates = foodLibrary
+        .map((food) => {
+            const quantity = kitById.get(food.id)
+            if (!quantity || quantity <= 0) {
+                return null
+            }
+            return { food, quantity }
+        })
+        .filter((entry): entry is { food: FoodItem; quantity: number } => Boolean(entry))
+        .sort((a, b) => {
+            const densityA = a.food.weightG > 0 ? a.food.carbsG / a.food.weightG : a.food.carbsG
+            const densityB = b.food.weightG > 0 ? b.food.carbsG / b.food.weightG : b.food.carbsG
+            return densityB - densityA
+        })
+
+    const items: PackingItem[] = []
+    let remainingCarbsG = totalCarbsG
+
+    for (const candidate of candidates) {
+        if (remainingCarbsG <= 0) {
+            break
+        }
+        const carbsPerItem = candidate.food.carbsG
+        if (carbsPerItem <= 0) {
+            continue
+        }
+        const countNeeded = Math.ceil(remainingCarbsG / carbsPerItem)
+        const count = Math.min(candidate.quantity, Math.max(0, countNeeded))
+        if (count <= 0) {
+            continue
+        }
+        remainingCarbsG -= count * carbsPerItem
+        items.push({ name: candidate.food.name, quantity: count, unit: 'x' })
+    }
+
+    return { items, remainingCarbsG: Math.max(0, Math.round(remainingCarbsG)) }
+}
+
+export function calcKitCoverage(
+    rideKit: RideKitItem[],
+    foodLibrary: FoodItem[],
+    plan: NutritionPlan
+): { kitCarbsG: number; kitWaterMl: number; kitCoverageWarning: string | null } {
+    let kitCarbsG = 0
+    let kitWaterMl = 0
+    for (const kitItem of rideKit) {
+        const match = foodLibrary.find((food) => food.id === kitItem.foodId)
+        if (!match) {
+            continue
+        }
+        kitCarbsG += match.carbsG * kitItem.quantity
+        kitWaterMl += match.waterMl * kitItem.quantity
+    }
+
+    kitCarbsG = Math.round(kitCarbsG)
+    kitWaterMl = Math.round(kitWaterMl)
+
+    const targetCarbsG = plan.totalCarbsG
+    const carbsShortG = Math.max(0, Math.round(targetCarbsG - kitCarbsG))
+
+    let kitCoverageWarning: string | null = null
+    if (carbsShortG > 0) {
+        kitCoverageWarning = `Kit short by ${carbsShortG}g carbs`
+    }
+
+    return { kitCarbsG, kitWaterMl, kitCoverageWarning }
 }
 
 export function generateRefillEvents(
@@ -390,7 +459,14 @@ export function generateRefillEvents(
 /**
  * Master nutrition planner that computes totals, events, and packing list.
  */
-export function calculatePlan(route: GpxRoute, rider: RiderProfile, targets: NutritionTargets, conditions: RideConditions, foodLibrary: FoodItem[]): NutritionPlan {
+export function calculatePlan(
+    route: GpxRoute,
+    rider: RiderProfile,
+    targets: NutritionTargets,
+    conditions: RideConditions,
+    foodLibrary: FoodItem[],
+    rideKit: RideKitItem[]
+): NutritionPlan {
     const estDurationHr = estimateDurationHr(route, targets.intensity)
     const sweatRateMlPerHr = calcSweatRateMlPerHr(rider, conditions, targets.intensity)
     const kcalPerHr = calcKcalPerHr(rider, targets.intensity, route.elevationGainM, estDurationHr)
@@ -399,7 +475,7 @@ export function calculatePlan(route: GpxRoute, rider: RiderProfile, targets: Nut
     const waterEvents = generateWaterEvents(route, targets, sweatRateMlPerHr)
     const events = mergeNearbyEvents(route, [...foodEvents, ...waterEvents], durationMinutes)
     const totalCarbsG = events.reduce((sum, event) => sum + event.carbsG, 0)
-    const allocation = allocateCarbsGreedy(totalCarbsG, foodLibrary)
+    const allocation = derivePackingListFromKit(totalCarbsG, rideKit, foodLibrary)
     const packingList = buildPackingList(events, allocation.items)
     const refillEvents = generateRefillEvents(events, rider.waterCapacityMl, route)
 
@@ -407,9 +483,6 @@ export function calculatePlan(route: GpxRoute, rider: RiderProfile, targets: Nut
     const totalWaterL = events.reduce((sum, event) => sum + event.drinkMl, 0) / 1000
     const totalKcal = kcalPerHr * estDurationHr
     const warningMessages: string[] = []
-    if (allocation.remainingCarbsG > 0) {
-        warningMessages.push('Food library does not cover carb target.')
-    }
     if (estDurationHr > 1 && targets.carbsGPerHr < 30) {
         warningMessages.push('Carb intake below 30 g/hr for a ride over 1 hour — under-fuelling likely.')
     }
@@ -418,7 +491,7 @@ export function calculatePlan(route: GpxRoute, rider: RiderProfile, targets: Nut
     }
     const warning = warningMessages.length ? warningMessages.join(' ') : undefined
 
-    return {
+    const planSnapshot: NutritionPlan = {
         totalKcal,
         totalWaterL,
         totalCarbsG,
@@ -428,6 +501,16 @@ export function calculatePlan(route: GpxRoute, rider: RiderProfile, targets: Nut
         events,
         refillEvents,
         packingList,
+        kitCarbsG: 0,
+        kitWaterMl: 0,
+        kitCoverageWarning: null,
         warning
+    }
+
+    const kitCoverage = calcKitCoverage(rideKit, foodLibrary, planSnapshot)
+
+    return {
+        ...planSnapshot,
+        ...kitCoverage
     }
 }

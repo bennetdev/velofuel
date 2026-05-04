@@ -7,6 +7,7 @@ import type {
     GpxRoute,
     NutritionPlan,
     NutritionTargets,
+    RideKitItem,
     RiderProfile,
     RideConditions
 } from '../types'
@@ -17,6 +18,7 @@ type RideStoreState = {
     targets: NutritionTargets
     conditions: RideConditions
     foodLibrary: FoodItem[]
+    rideKit: RideKitItem[]
     plan: NutritionPlan | null
     weatherError: string | null
     setRoute: (route: GpxRoute) => void
@@ -25,6 +27,8 @@ type RideStoreState = {
     applyOptimalTargets: () => void
     setConditions: (fields: Partial<RideConditions>) => void
     setFoodLibrary: (items: FoodItem[]) => void
+    setRideKitItem: (foodId: string, quantity: number) => void
+    removeRideKitItem: (foodId: string) => void
     setWeatherError: (msg: string | null) => void
     recalculate: () => void
 }
@@ -53,6 +57,13 @@ const DEFAULT_CONDITIONS: RideConditions = {
     humidityPct: 50,
     windKmh: 0,
     isHeadwind: false
+}
+
+function clampQuantity(value: number): number {
+    if (!isFinite(value)) {
+        return 1
+    }
+    return Math.min(20, Math.max(1, Math.round(value)))
 }
 
 function loadStored<T>(key: string): T | null {
@@ -91,6 +102,7 @@ export const useRideStore = create<RideStoreState>((set, get) => ({
     targets: loadTargets(),
     conditions: DEFAULT_CONDITIONS,
     foodLibrary: loadFoodLibrary(),
+    rideKit: [],
     plan: null,
     weatherError: null,
     setRoute: (route) => {
@@ -127,16 +139,35 @@ export const useRideStore = create<RideStoreState>((set, get) => ({
         set({ foodLibrary: items })
         get().recalculate()
     },
+    setRideKitItem: (foodId, quantity) => {
+        set((state) => {
+            const nextQuantity = clampQuantity(quantity)
+            const existing = state.rideKit.find((item) => item.foodId === foodId)
+            if (existing) {
+                return {
+                    rideKit: state.rideKit.map((item) =>
+                        item.foodId === foodId ? { ...item, quantity: nextQuantity } : item
+                    )
+                }
+            }
+            return { rideKit: [...state.rideKit, { foodId, quantity: nextQuantity }] }
+        })
+        get().recalculate()
+    },
+    removeRideKitItem: (foodId) => {
+        set((state) => ({ rideKit: state.rideKit.filter((item) => item.foodId !== foodId) }))
+        get().recalculate()
+    },
     setWeatherError: (msg) => {
         set({ weatherError: msg })
     },
     recalculate: () => {
-        const { route, rider, targets, conditions, foodLibrary } = get()
+        const { route, rider, targets, conditions, foodLibrary, rideKit } = get()
         if (!route) {
             set({ plan: null })
             return
         }
-        const plan = calculatePlan(route, rider, targets, conditions, foodLibrary)
+        const plan = calculatePlan(route, rider, targets, conditions, foodLibrary, rideKit)
         set({ plan })
     }
 }))

@@ -39,6 +39,11 @@ export type RefillEvent = {
     refillMl: number
 }
 
+export type RideKitItem = {
+    foodId: string
+    quantity: number
+}
+
 // Full output
 export type NutritionPlan = {
     totalKcal: number
@@ -50,6 +55,9 @@ export type NutritionPlan = {
     events: RefuelEvent[]
     refillEvents: RefillEvent[]
     packingList: PackingItem[]  // derived: "3 gels, 2 bars, 1.8L water"
+    kitCarbsG: number
+    kitWaterMl: number
+    kitCoverageWarning: string | null
     warning?: string
 }
 

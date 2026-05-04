@@ -3,6 +3,7 @@ import { useState, type ChangeEvent } from 'react'
 import { createFoodItem } from './lib/foodLibrary'
 import { parseGpx } from './lib/gpxParser'
 import { calcBearing, fetchWeather } from './lib/weatherApi'
+import { FoodLibrary } from './components/FoodLibrary'
 import { RouteTimeline } from './components/RouteTimeline'
 import { useRideStore } from './store/rideStore'
 import type { RiderProfile } from './types'
@@ -14,6 +15,7 @@ export default function App() {
     targets,
     conditions,
     foodLibrary,
+    rideKit,
     plan,
     weatherError,
     setRoute,
@@ -22,6 +24,8 @@ export default function App() {
     applyOptimalTargets,
     setConditions,
     setFoodLibrary,
+    setRideKitItem,
+    removeRideKitItem,
     setWeatherError
   } = useRideStore()
 
@@ -30,12 +34,6 @@ export default function App() {
   const [weatherLat, setWeatherLat] = useState<string>('')
   const [weatherLon, setWeatherLon] = useState<string>('')
   const [weatherStart, setWeatherStart] = useState<string>('')
-  const [foodName, setFoodName] = useState<string>('')
-  const [foodWeightG, setFoodWeightG] = useState<string>('')
-  const [foodKcal, setFoodKcal] = useState<string>('')
-  const [foodCarbsG, setFoodCarbsG] = useState<string>('')
-  const [foodSodiumMg, setFoodSodiumMg] = useState<string>('')
-  const [foodWaterMl, setFoodWaterMl] = useState<string>('')
 
   const round0 = (value: number) => Math.round(value)
   const round1 = (value: number) => Number(value.toFixed(1))
@@ -85,35 +83,14 @@ export default function App() {
     }
   }
 
-  const handleAddFood = () => {
-    const name = foodName.trim()
-    if (!name) {
-      return
-    }
-    const weightG = Number(foodWeightG)
-    const kcal = Number(foodKcal)
-    const carbsG = Number(foodCarbsG)
-    const sodiumMg = Number(foodSodiumMg)
-    const waterMl = Number(foodWaterMl)
-    const newItem = createFoodItem({
-      name,
-      weightG: isFinite(weightG) ? weightG : 0,
-      kcal: isFinite(kcal) ? kcal : 0,
-      carbsG: isFinite(carbsG) ? carbsG : 0,
-      sodiumMg: isFinite(sodiumMg) ? sodiumMg : 0,
-      waterMl: isFinite(waterMl) ? waterMl : 0
-    })
+  const handleAddFood = (fields: Parameters<typeof createFoodItem>[0]) => {
+    const newItem = createFoodItem(fields)
     setFoodLibrary([...foodLibrary, newItem])
-    setFoodName('')
-    setFoodWeightG('')
-    setFoodKcal('')
-    setFoodCarbsG('')
-    setFoodSodiumMg('')
-    setFoodWaterMl('')
   }
 
   const handleRemoveFood = (id: string) => {
     setFoodLibrary(foodLibrary.filter((item) => item.id !== id))
+    removeRideKitItem(id)
   }
 
   const handleFetchWeather = async () => {
@@ -368,70 +345,14 @@ export default function App() {
             <h2>Your food library</h2>
             <span className="panel-hint">Add custom items or remove them below.</span>
           </div>
-          <div className="chips">
-            {foodLibrary.map((item) => (
-              <div key={item.id} className="chip">
-                <div>
-                  <p className="chip-title">{item.name}</p>
-                  <p className="chip-meta">{item.carbsG}g carbs</p>
-                </div>
-                {!item.isPreset ? (
-                  <button
-                    type="button"
-                    className="chip-remove"
-                    onClick={() => handleRemoveFood(item.id)}
-                  >
-                    Remove
-                  </button>
-                ) : null}
-              </div>
-            ))}
-          </div>
-          <div className="food-form">
-            <label className="field">
-              <span>Name</span>
-              <input value={foodName} onChange={(event) => setFoodName(event.target.value)} />
-            </label>
-            <label className="field">
-              <span>Weight (g)</span>
-              <input
-                type="number"
-                value={foodWeightG}
-                onChange={(event) => setFoodWeightG(event.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span>Kcal</span>
-              <input type="number" value={foodKcal} onChange={(event) => setFoodKcal(event.target.value)} />
-            </label>
-            <label className="field">
-              <span>Carbs (g)</span>
-              <input
-                type="number"
-                value={foodCarbsG}
-                onChange={(event) => setFoodCarbsG(event.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span>Sodium (mg)</span>
-              <input
-                type="number"
-                value={foodSodiumMg}
-                onChange={(event) => setFoodSodiumMg(event.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span>Water (ml)</span>
-              <input
-                type="number"
-                value={foodWaterMl}
-                onChange={(event) => setFoodWaterMl(event.target.value)}
-              />
-            </label>
-            <button type="button" className="primary" onClick={handleAddFood}>
-              Add custom food
-            </button>
-          </div>
+          <FoodLibrary
+            foodLibrary={foodLibrary}
+            rideKit={rideKit}
+            onAddCustomFood={handleAddFood}
+            onRemoveCustomFood={handleRemoveFood}
+            onSetKitItem={setRideKitItem}
+            onRemoveKitItem={removeRideKitItem}
+          />
         </div>
       </section>
 
@@ -468,6 +389,7 @@ export default function App() {
               </div>
             </div>
             {plan.warning ? <p className="warning">{plan.warning}</p> : null}
+            {plan.kitCoverageWarning ? <p className="warning">{plan.kitCoverageWarning}</p> : null}
             {plan.refillEvents.length > 0 ? (
               <p className="warning-amber">
                 This route requires {plan.refillEvents.length} bottle refill

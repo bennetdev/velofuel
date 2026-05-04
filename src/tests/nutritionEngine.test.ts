@@ -3,10 +3,11 @@ import { describe, expect, it } from 'vitest'
 import {
 	calcKcalPerHr,
 	calcSweatRateMlPerHr,
-	derivePackingList,
+	calcKitCoverage,
+	derivePackingListFromKit,
 	generateFoodEvents
 } from '../lib/nutritionEngine'
-import type { FoodItem, GpxRoute, RefuelEvent, RiderProfile, RideConditions } from '../types'
+import type { FoodItem, GpxRoute, NutritionPlan, RefuelEvent, RiderProfile, RideConditions, RideKitItem } from '../types'
 
 function makeFlatRoute(distanceKm: number): GpxRoute {
 	return {
@@ -107,12 +108,9 @@ describe('generateFoodEvents', () => {
 	})
 })
 
-describe('derivePackingList', () => {
-	it('covers total carb requirement when library is sufficient', () => {
-		const events: RefuelEvent[] = [
-			{ km: 10, timeMin: 30, drinkMl: 500, carbsG: 60, sodiumMg: 300, type: 'combined' },
-			{ km: 20, timeMin: 60, drinkMl: 500, carbsG: 60, sodiumMg: 300, type: 'combined' }
-		]
+describe('derivePackingListFromKit', () => {
+	it('allocates from available kit inventory', () => {
+		const kit: RideKitItem[] = [{ foodId: 'gel', quantity: 2 }]
 		const library: FoodItem[] = [
 			{
 				id: 'gel',
@@ -126,22 +124,50 @@ describe('derivePackingList', () => {
 				version: 1
 			}
 		]
-		const packingList = derivePackingList(events, library)
-		const totalCarbsNeeded = events.reduce((sum, event) => sum + event.carbsG, 0)
-		const carbsFromItems = packingList.reduce((sum, item) => {
-			if (item.name === 'Water') {
-				return sum
-			}
-			const match = library.find((food) => food.name === item.name)
-			return sum + (match ? match.carbsG * item.quantity : 0)
-		}, 0)
-		expect(carbsFromItems).toBeGreaterThanOrEqual(totalCarbsNeeded)
+		const allocation = derivePackingListFromKit(50, kit, library)
+		expect(allocation.items).toEqual([{ name: 'Gel', quantity: 2, unit: 'x' }])
 	})
 
-	it('adds water even if the food library is empty', () => {
-		const events: RefuelEvent[] = [{ km: 10, timeMin: 30, drinkMl: 500, carbsG: 60, sodiumMg: 300, type: 'combined' }]
-		const packingList = derivePackingList(events, [])
-		expect(packingList.length).toBe(1)
-		expect(packingList[0]?.name).toBe('Water')
+	it('skips kit entries with unknown food IDs', () => {
+		const kit: RideKitItem[] = [{ foodId: 'missing', quantity: 1 }]
+		const allocation = derivePackingListFromKit(40, kit, [])
+		expect(allocation.items).toEqual([])
+	})
+})
+
+describe('calcKitCoverage', () => {
+	it('returns shortfall warning when kit is under target', () => {
+		const plan: NutritionPlan = {
+			totalKcal: 1000,
+			totalWaterL: 1.5,
+			totalCarbsG: 120,
+			totalSodiumMg: 800,
+			sweatRateMlPerHr: 700,
+			estDurationHr: 2,
+			events: [] as RefuelEvent[],
+			refillEvents: [],
+			packingList: [],
+			kitCarbsG: 0,
+			kitWaterMl: 0,
+			kitCoverageWarning: null
+		}
+		const kit: RideKitItem[] = [{ foodId: 'bar', quantity: 1 }]
+		const library: FoodItem[] = [
+			{
+				id: 'bar',
+				name: 'Bar',
+				weightG: 50,
+				kcal: 200,
+				carbsG: 30,
+				sodiumMg: 100,
+				waterMl: 100,
+				isPreset: false,
+				version: 1
+			}
+		]
+		const result = calcKitCoverage(kit, library, plan)
+		expect(result.kitCarbsG).toBe(30)
+		expect(result.kitWaterMl).toBe(100)
+		expect(result.kitCoverageWarning).toBe('Kit short by 90g carbs')
 	})
 })

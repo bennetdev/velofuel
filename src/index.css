@@ -365,6 +365,117 @@ select {
   gap: 12px;
 }
 
+.food-library {
+  display: grid;
+  gap: 18px;
+}
+
+.food-library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.food-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  background: #fff;
+  display: grid;
+  gap: 12px;
+  transition: border-color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+.food-card.is-dimmed {
+  opacity: 0.6;
+}
+
+.food-card.is-warning {
+  border-color: #f0b429;
+  box-shadow: 0 0 0 1px rgba(240, 180, 41, 0.25);
+}
+
+.food-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.food-card-title {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.food-card-meta {
+  font-size: 0.85rem;
+}
+
+.food-card-tags {
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+}
+
+.food-card-badge {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--panel-soft);
+  color: var(--accent-dark);
+}
+
+.food-card-remove {
+  border: none;
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.kit-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.kit-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kit-stepper button {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.kit-stepper button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.kit-stepper input {
+  width: 64px;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+}
+
 .chip {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
