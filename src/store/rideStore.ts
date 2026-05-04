@@ -43,7 +43,8 @@ const DEFAULT_RIDER: RiderProfile = {
 const DEFAULT_TARGETS: NutritionTargets = {
     carbsGPerHr: 60,
     sodiumMgPerHr: 700,
-    refuelIntervalMin: 30,
+    foodIntervalMin: 30,
+    waterIntervalMin: 20,
     intensity: 'moderate'
 }
 

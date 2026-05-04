@@ -9,7 +9,8 @@ export type RiderProfile = { weightKg: number; heightCm: number; age: number; se
 export type NutritionTargets = {
     carbsGPerHr: number         // 30–120
     sodiumMgPerHr: number       // 200–1500
-    refuelIntervalMin: number   // 15–60
+    foodIntervalMin: number     // 15–60
+    waterIntervalMin: number    // 10–45
     intensity: 'easy' | 'moderate' | 'hard'
 }
 
@@ -25,10 +26,11 @@ export type RideConditions = {
 export type RefuelEvent = {
     km: number
     timeMin: number
-    drinkMl: number
     carbsG: number
+    drinkMl: number
     sodiumMg: number
-    note?: string               // e.g. "steep climb ahead — eat now"
+    type: 'food' | 'water' | 'combined'
+    note?: string
 }
 
 export type RefillEvent = {

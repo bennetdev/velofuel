@@ -21,6 +21,7 @@ type ElevationPoint = { km: number; ele: number }
 
 const ORANGE = '#E8540A'
 const BLUE = '#3B82F6'
+const PURPLE = '#7C3AED'
 const REFILL_BLUE = '#2563EB'
 
 function toRadians(deg: number): number {
@@ -86,13 +87,16 @@ function TimelineStrip({ route, events, refillEvents }: RouteTimelineProps) {
             <div className="timeline-label end">{Math.round(distanceKm)} km</div>
             {events.map((event, index) => {
                 const percent = distanceKm > 0 ? (event.km / distanceKm) * 100 : 0
-                const markerColor = event.carbsG > 0 ? ORANGE : BLUE
+                const markerStyle =
+                    event.type === 'combined'
+                        ? { background: `linear-gradient(90deg, ${ORANGE} 50%, ${BLUE} 50%)` }
+                        : { backgroundColor: event.type === 'food' ? ORANGE : BLUE }
                 return (
                     <button
                         key={`${event.km}-${index}`}
                         className="timeline-marker"
                         type="button"
-                        style={{ left: `${percent}%`, backgroundColor: markerColor }}
+                        style={{ left: `${percent}%`, ...markerStyle }}
                         onMouseEnter={() => setHovered({ kind: 'refuel', event })}
                         onMouseLeave={() => setHovered((current) => (current?.event === event ? null : current))}
                     >
@@ -125,10 +129,18 @@ function TimelineStrip({ route, events, refillEvents }: RouteTimelineProps) {
                             <p>
                                 <strong>{hovered.event.km.toFixed(1)} km</strong> · {formatTime(hovered.event.timeMin)}
                             </p>
-                            <p>
-                                Drink {Math.round(hovered.event.drinkMl)} ml · Carbs {Math.round(hovered.event.carbsG)} g · Sodium{' '}
-                                {Math.round(hovered.event.sodiumMg)} mg
-                            </p>
+                            {hovered.event.type === 'food' ? (
+                                <p>Carbs {Math.round(hovered.event.carbsG)} g</p>
+                            ) : hovered.event.type === 'water' ? (
+                                <p>
+                                    Drink {Math.round(hovered.event.drinkMl)} ml · Sodium {Math.round(hovered.event.sodiumMg)} mg
+                                </p>
+                            ) : (
+                                <p>
+                                    Drink {Math.round(hovered.event.drinkMl)} ml · Carbs {Math.round(hovered.event.carbsG)} g · Sodium{' '}
+                                    {Math.round(hovered.event.sodiumMg)} mg
+                                </p>
+                            )}
                             {hovered.event.note ? <p className="timeline-note">{hovered.event.note}</p> : null}
                         </>
                     ) : (
@@ -169,8 +181,8 @@ function ElevationChart({ route, events, refillEvents }: RouteTimelineProps) {
                         <ReferenceLine
                             key={`${event.km}-${index}`}
                             x={event.km}
-                            stroke={event.carbsG > 0 ? ORANGE : BLUE}
-                            strokeDasharray="3 3"
+                            stroke={event.type === 'combined' ? PURPLE : event.type === 'food' ? ORANGE : BLUE}
+                            strokeDasharray={event.type === 'combined' ? undefined : '3 3'}
                         />
                     ))}
                     {refillEvents.map((event, index) => (

@@ -33,14 +33,14 @@ const INTENSITY_MULTIPLIER: Record<Intensity, number> = {
 
 export function getOptimalTargets(
     intensity: Intensity
-): Pick<NutritionTargets, 'carbsGPerHr' | 'sodiumMgPerHr' | 'refuelIntervalMin'> {
+): Pick<NutritionTargets, 'carbsGPerHr' | 'sodiumMgPerHr' | 'foodIntervalMin' | 'waterIntervalMin'> {
     if (intensity === 'easy') {
-        return { carbsGPerHr: 40, sodiumMgPerHr: 400, refuelIntervalMin: 45 }
+        return { carbsGPerHr: 40, sodiumMgPerHr: 400, foodIntervalMin: 45, waterIntervalMin: 30 }
     }
     if (intensity === 'hard') {
-        return { carbsGPerHr: 90, sodiumMgPerHr: 1000, refuelIntervalMin: 20 }
+        return { carbsGPerHr: 90, sodiumMgPerHr: 1000, foodIntervalMin: 20, waterIntervalMin: 15 }
     }
-    return { carbsGPerHr: 60, sodiumMgPerHr: 700, refuelIntervalMin: 30 }
+    return { carbsGPerHr: 60, sodiumMgPerHr: 700, foodIntervalMin: 30, waterIntervalMin: 20 }
 }
 
 /** Clamp a numeric value to an inclusive range. */
@@ -150,19 +150,62 @@ export function calcSweatRateMlPerHr(rider: RiderProfile, conditions: RideCondit
     return clamp(rate, 300, 2000)
 }
 
+function resolveEventType(carbsG: number, drinkMl: number, sodiumMg: number): RefuelEvent['type'] {
+    const hasFood = carbsG > 0
+    const hasWater = drinkMl > 0 || sodiumMg > 0
+    if (hasFood && hasWater) {
+        return 'combined'
+    }
+    if (hasFood) {
+        return 'food'
+    }
+    return 'water'
+}
+
+function mergeNearbyEvents(route: GpxRoute, events: RefuelEvent[], totalMinutes: number): RefuelEvent[] {
+    const sorted = events.slice().sort((a, b) => a.km - b.km)
+    const merged: RefuelEvent[] = []
+    const distanceKm = route.distanceKm || 0
+
+    for (const event of sorted) {
+        const last = merged[merged.length - 1]
+        if (last && Math.abs(event.km - last.km) <= 2) {
+            const km = Math.min(last.km, event.km)
+            const carbsG = last.carbsG + event.carbsG
+            const drinkMl = last.drinkMl + event.drinkMl
+            const sodiumMg = last.sodiumMg + event.sodiumMg
+            const timeMin = distanceKm > 0 ? (km / distanceKm) * totalMinutes : Math.min(last.timeMin, event.timeMin)
+            merged[merged.length - 1] = {
+                km,
+                timeMin,
+                carbsG,
+                drinkMl,
+                sodiumMg,
+                type: resolveEventType(carbsG, drinkMl, sodiumMg),
+                note: last.note ?? event.note
+            }
+            continue
+        }
+        merged.push(event)
+    }
+
+    return merged
+}
+
 /**
- * Create refuel events on a fixed interval, shifting earlier when a climb is imminent.
+ * Create food events on a fixed interval, shifting earlier when a climb is imminent.
  */
-export function generateEvents(route: GpxRoute, targets: NutritionTargets, sweatRateMlPerHr: number): RefuelEvent[] {
+export function generateFoodEvents(route: GpxRoute, targets: NutritionTargets, kcalPerHr: number): RefuelEvent[] {
     if (!route.points.length) {
         return []
     }
+    void kcalPerHr
     const durationHr = estimateDurationHr(route, targets.intensity)
     if (durationHr <= 0) {
         return []
     }
     const totalMinutes = durationHr * 60
-    const intervalMin = targets.refuelIntervalMin
+    const intervalMin = targets.foodIntervalMin
     if (intervalMin <= 0) {
         return []
     }
@@ -176,9 +219,9 @@ export function generateEvents(route: GpxRoute, targets: NutritionTargets, sweat
 
     for (let timeMin = intervalMin; timeMin <= totalMinutes - intervalMin * 0.5; timeMin += intervalMin) {
         const intervalHr = intervalMin / 60
-        const drinkMl = sweatRateMlPerHr * intervalHr
         const carbsG = targets.carbsGPerHr * intervalHr
-        const sodiumMg = targets.sodiumMgPerHr * intervalHr
+        const drinkMl = 0
+        const sodiumMg = 0
 
         let km = avgSpeedKmPerHr * (timeMin / 60)
         if (km > route.distanceKm) {
@@ -202,7 +245,57 @@ export function generateEvents(route: GpxRoute, targets: NutritionTargets, sweat
             drinkMl,
             carbsG,
             sodiumMg,
+            type: 'food',
             note
+        })
+    }
+
+    return events
+}
+
+/**
+ * Create water events on a fixed interval without shifting for climbs.
+ */
+export function generateWaterEvents(route: GpxRoute, targets: NutritionTargets, sweatRateMlPerHr: number): RefuelEvent[] {
+    if (!route.points.length) {
+        return []
+    }
+    const durationHr = estimateDurationHr(route, targets.intensity)
+    if (durationHr <= 0) {
+        return []
+    }
+    const totalMinutes = durationHr * 60
+    const intervalMin = targets.waterIntervalMin
+    if (intervalMin <= 0) {
+        return []
+    }
+    const avgSpeedKmPerHr = route.distanceKm / durationHr
+    if (!isFinite(avgSpeedKmPerHr) || avgSpeedKmPerHr <= 0) {
+        return []
+    }
+
+    const events: RefuelEvent[] = []
+
+    for (let timeMin = intervalMin; timeMin <= totalMinutes - intervalMin * 0.5; timeMin += intervalMin) {
+        const intervalHr = intervalMin / 60
+        const drinkMl = sweatRateMlPerHr * intervalHr
+        const carbsG = 0
+        const sodiumMg = targets.sodiumMgPerHr * intervalHr
+
+        const km = avgSpeedKmPerHr * (timeMin / 60)
+        if (km > route.distanceKm) {
+            break
+        }
+
+        const adjustedTimeMin = route.distanceKm > 0 ? (km / route.distanceKm) * totalMinutes : 0
+
+        events.push({
+            km,
+            timeMin: adjustedTimeMin,
+            drinkMl,
+            carbsG,
+            sodiumMg,
+            type: 'water'
         })
     }
 
@@ -301,7 +394,10 @@ export function calculatePlan(route: GpxRoute, rider: RiderProfile, targets: Nut
     const estDurationHr = estimateDurationHr(route, targets.intensity)
     const sweatRateMlPerHr = calcSweatRateMlPerHr(rider, conditions, targets.intensity)
     const kcalPerHr = calcKcalPerHr(rider, targets.intensity, route.elevationGainM, estDurationHr)
-    const events = generateEvents(route, targets, sweatRateMlPerHr)
+    const durationMinutes = estDurationHr * 60
+    const foodEvents = generateFoodEvents(route, targets, kcalPerHr)
+    const waterEvents = generateWaterEvents(route, targets, sweatRateMlPerHr)
+    const events = mergeNearbyEvents(route, [...foodEvents, ...waterEvents], durationMinutes)
     const totalCarbsG = events.reduce((sum, event) => sum + event.carbsG, 0)
     const allocation = allocateCarbsGreedy(totalCarbsG, foodLibrary)
     const packingList = buildPackingList(events, allocation.items)

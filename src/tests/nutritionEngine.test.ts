@@ -4,9 +4,9 @@ import {
 	calcKcalPerHr,
 	calcSweatRateMlPerHr,
 	derivePackingList,
-	generateEvents
+	generateFoodEvents
 } from '../lib/nutritionEngine'
-import type { FoodItem, GpxRoute, RiderProfile, RideConditions } from '../types'
+import type { FoodItem, GpxRoute, RefuelEvent, RiderProfile, RideConditions } from '../types'
 
 function makeFlatRoute(distanceKm: number): GpxRoute {
 	return {
@@ -72,12 +72,12 @@ describe('calcSweatRateMlPerHr', () => {
 	})
 })
 
-describe('generateEvents', () => {
+describe('generateFoodEvents', () => {
 	it('returns expected stop count for flat route', () => {
 		const route = makeFlatRoute(100)
-		const events = generateEvents(
+		const events = generateFoodEvents(
 			route,
-			{ carbsGPerHr: 60, sodiumMgPerHr: 700, refuelIntervalMin: 30, intensity: 'moderate' },
+			{ carbsGPerHr: 60, sodiumMgPerHr: 700, foodIntervalMin: 30, waterIntervalMin: 20, intensity: 'moderate' },
 			600
 		)
 		const durationMinutes = (route.distanceKm / 25) * 60
@@ -87,9 +87,9 @@ describe('generateEvents', () => {
 
 	it('returns empty array when points are empty', () => {
 		const route: GpxRoute = { points: [], distanceKm: 0, elevationGainM: 0 }
-		const events = generateEvents(
+		const events = generateFoodEvents(
 			route,
-			{ carbsGPerHr: 60, sodiumMgPerHr: 700, refuelIntervalMin: 30, intensity: 'moderate' },
+			{ carbsGPerHr: 60, sodiumMgPerHr: 700, foodIntervalMin: 30, waterIntervalMin: 20, intensity: 'moderate' },
 			600
 		)
 		expect(events).toEqual([])
@@ -97,9 +97,9 @@ describe('generateEvents', () => {
 
 	it('flags climb-ahead events when ascent exceeds threshold', () => {
 		const route = makeClimbRoute()
-		const events = generateEvents(
+		const events = generateFoodEvents(
 			route,
-			{ carbsGPerHr: 60, sodiumMgPerHr: 700, refuelIntervalMin: 30, intensity: 'moderate' },
+			{ carbsGPerHr: 60, sodiumMgPerHr: 700, foodIntervalMin: 30, waterIntervalMin: 20, intensity: 'moderate' },
 			600
 		)
 		const hasClimbNote = events.some((event) => event.note === 'climb ahead, fuel now')
@@ -109,9 +109,9 @@ describe('generateEvents', () => {
 
 describe('derivePackingList', () => {
 	it('covers total carb requirement when library is sufficient', () => {
-		const events = [
-			{ km: 10, timeMin: 30, drinkMl: 500, carbsG: 60, sodiumMg: 300 },
-			{ km: 20, timeMin: 60, drinkMl: 500, carbsG: 60, sodiumMg: 300 }
+		const events: RefuelEvent[] = [
+			{ km: 10, timeMin: 30, drinkMl: 500, carbsG: 60, sodiumMg: 300, type: 'combined' },
+			{ km: 20, timeMin: 60, drinkMl: 500, carbsG: 60, sodiumMg: 300, type: 'combined' }
 		]
 		const library: FoodItem[] = [
 			{
@@ -139,7 +139,7 @@ describe('derivePackingList', () => {
 	})
 
 	it('adds water even if the food library is empty', () => {
-		const events = [{ km: 10, timeMin: 30, drinkMl: 500, carbsG: 60, sodiumMg: 300 }]
+		const events: RefuelEvent[] = [{ km: 10, timeMin: 30, drinkMl: 500, carbsG: 60, sodiumMg: 300, type: 'combined' }]
 		const packingList = derivePackingList(events, [])
 		expect(packingList.length).toBe(1)
 		expect(packingList[0]?.name).toBe('Water')

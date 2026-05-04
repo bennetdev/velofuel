@@ -252,16 +252,29 @@ export default function App() {
               </div>
             </label>
             <label className="field">
-              <span>Refuel interval</span>
+              <span>Food interval (min)</span>
               <div className="range-row">
                 <input
                   type="range"
                   min={15}
                   max={60}
-                  value={targets.refuelIntervalMin}
-                  onChange={(event) => setTargets({ refuelIntervalMin: Number(event.target.value) })}
+                  value={targets.foodIntervalMin}
+                  onChange={(event) => setTargets({ foodIntervalMin: Number(event.target.value) })}
                 />
-                <span className="range-value">{targets.refuelIntervalMin} min</span>
+                <span className="range-value">{targets.foodIntervalMin} min</span>
+              </div>
+            </label>
+            <label className="field">
+              <span>Water interval (min)</span>
+              <div className="range-row">
+                <input
+                  type="range"
+                  min={10}
+                  max={45}
+                  value={targets.waterIntervalMin}
+                  onChange={(event) => setTargets({ waterIntervalMin: Number(event.target.value) })}
+                />
+                <span className="range-value">{targets.waterIntervalMin} min</span>
               </div>
             </label>
           </div>
@@ -483,9 +496,9 @@ export default function App() {
                       <tr key={`${event.km}-${index}`}>
                         <td>{round1(event.km)}</td>
                         <td>{round0(event.timeMin)} min</td>
-                        <td>{round0(event.drinkMl)} ml</td>
-                        <td>{round0(event.carbsG)} g</td>
-                        <td>{round0(event.sodiumMg)} mg</td>
+                        <td>{event.drinkMl > 0 ? `${round0(event.drinkMl)} ml` : ''}</td>
+                        <td>{event.carbsG > 0 ? `${round0(event.carbsG)} g` : ''}</td>
+                        <td>{event.sodiumMg > 0 ? `${round0(event.sodiumMg)} mg` : ''}</td>
                         <td>{event.note ?? ''}</td>
                       </tr>
                     ))}
