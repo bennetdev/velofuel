@@ -218,7 +218,7 @@ export function generateFoodEvents(route: GpxRoute, targets: NutritionTargets, k
     const distancesKm = buildCumulativeDistancesKm(route.points)
     const events: RefuelEvent[] = []
 
-    for (let timeMin = intervalMin; timeMin <= totalMinutes - intervalMin * 0.5; timeMin += intervalMin) {
+    for (let timeMin = intervalMin; timeMin <= totalMinutes - intervalMin * 0.1; timeMin += intervalMin) {
         const intervalHr = intervalMin / 60
         const carbsG = targets.carbsGPerHr * intervalHr
         const drinkMl = 0
@@ -277,7 +277,7 @@ export function generateWaterEvents(route: GpxRoute, targets: NutritionTargets, 
 
     const events: RefuelEvent[] = []
 
-    for (let timeMin = intervalMin; timeMin <= totalMinutes - intervalMin * 0.5; timeMin += intervalMin) {
+    for (let timeMin = intervalMin; timeMin <= totalMinutes - intervalMin * 0.1; timeMin += intervalMin) {
         const intervalHr = intervalMin / 60
         const drinkMl = sweatRateMlPerHr * intervalHr
         const carbsG = 0
